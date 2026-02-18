@@ -75,6 +75,10 @@ INSTRUCTIONS for Collaborative Response:
 3. ACTIVE REACTION: Look at what the previous agents decided. If Fire set a 500m zone, YOU must use that 500m zone in your plan.
 4. BUILD UPON: Use the previous findings as facts. Your job is to fill the gaps left by others within your domain.
 5. BE BREIF: 2-3 direct bullet points maximum.
+6. LANGUAGE MATCHING (Critical): Detect the language of the SITUATION. 
+       - If the user input is in HEBREW, your entire response MUST be in HEBREW.
+       - If the user input is in ENGLISH, your entire response MUST be in ENGLISH.
+       - Use professional terminology appropriate for the chosen language.
 
 SITUATION:
 {user_input}
