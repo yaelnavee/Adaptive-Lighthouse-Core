@@ -42,6 +42,7 @@ CommandCore/
 ├── .env                # Private API keys (not tracked in Git)
 ├── main.py             # Milestone 1 CLI interface
 └── requirements.txt    # Project dependencies
+```text
 
 ## 💻 Installation & Usage
 Setup
