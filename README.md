@@ -50,13 +50,15 @@ Create a .env file in the root directory:
    GROQ_API_KEY=your_groq_api_key_here
 
 ### 🚀 Running the App
-Create a .env file in the root directory:
-   ```bash
-   streamlit run ui/streamlit_app.py
-   
-To test a single Specialist (CLI Mode):
-   ```bash
-   python main.py
+   1. **Collaborative Round Table (Recommended):**
+   Running the full visual interface showing the collaboration between agents:
+      ```bash
+      streamlit run ui/streamlit_app.py
+      
+2. **Single Specialist (CLI Mode):**
+   Checking the response of a single expert agent via the terminal:
+      ```bash
+      python main.py
 
 ## 📂 Project Structure
 ```text
