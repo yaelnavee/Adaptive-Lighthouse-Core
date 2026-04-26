@@ -33,22 +33,22 @@
 ---
 
 ## 💻 Installation & Usage
-Setup
-Clone the repository:
 
-Bash
-git clone [https://github.com/YourUsername/Adaptive-Lighthouse-Core.git](https://github.com/YourUsername/Adaptive-Lighthouse-Core.git)
-cd Adaptive-Lighthouse-Core/CommandCore
-Install dependencies:
+### ⚙️ Setup
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/YourUsername/Adaptive-Lighthouse-Core.git
+   cd Adaptive-Lighthouse-Core/CommandCore
+   
+### Install dependencies:
+   ```bash
+   pip install -r requirements.txt
 
-Bash
-pip install -r requirements.txt
-Configure API Key:
+### Configure API Key:
 Create a .env file in the root directory:
-
-קטע קוד
 GROQ_API_KEY=your_groq_api_key_here
-Running the App
+
+### Running the App
 To run the Collaborative Round Table (Recommended):
 
 Bash
