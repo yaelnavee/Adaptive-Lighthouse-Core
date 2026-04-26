@@ -39,24 +39,24 @@
    ```bash
    git clone https://github.com/YourUsername/Adaptive-Lighthouse-Core.git
    cd Adaptive-Lighthouse-Core/CommandCore
-   
-### Install dependencies:
+
+2. **Install dependencies**
    ```bash
    pip install -r requirements.txt
-
-### Configure API Key:
+   
+3. **Configure API Key:**
 Create a .env file in the root directory:
-GROQ_API_KEY=your_groq_api_key_here
+   ```bash
+   GROQ_API_KEY=your_groq_api_key_here
 
-### Running the App
-To run the Collaborative Round Table (Recommended):
-
-Bash
-streamlit run ui/streamlit_app.py
+### 🚀 Running the App
+Create a .env file in the root directory:
+   ```bash
+   streamlit run ui/streamlit_app.py
+   
 To test a single Specialist (CLI Mode):
-
-Bash
-python main.py
+   ```bash
+   python main.py
 
 ## 📂 Project Structure
 ```text
