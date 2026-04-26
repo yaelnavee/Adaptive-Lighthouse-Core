@@ -32,17 +32,6 @@
 
 ---
 
-## 📂 Project Structure
-```text
-CommandCore/
-├── agents/             # Agent logic, BaseAgent, and SpecialistFactory
-├── protocols/          # Markdown files containing emergency doctrines (RAG source)
-├── llm/                # API client for Groq communication
-├── ui/                 # Streamlit web interface
-├── .env                # Private API keys (not tracked in Git)
-├── main.py             # Milestone 1 CLI interface
-└── requirements.txt    # Project dependencies
-
 ## 💻 Installation & Usage
 Setup
 Clone the repository:
@@ -68,3 +57,14 @@ To test a single Specialist (CLI Mode):
 
 Bash
 python main.py
+
+## 📂 Project Structure
+```text
+CommandCore/
+├── agents/             # Agent logic, BaseAgent, and SpecialistFactory
+├── protocols/          # Markdown files containing emergency doctrines (RAG source)
+├── llm/                # API client for Groq communication
+├── ui/                 # Streamlit web interface
+├── .env                # Private API keys (not tracked in Git)
+├── main.py             # Milestone 1 CLI interface
+└── requirements.txt    # Project dependencies
