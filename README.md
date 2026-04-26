@@ -42,3 +42,29 @@ CommandCore/
 ├── .env                # Private API keys (not tracked in Git)
 ├── main.py             # Milestone 1 CLI interface
 └── requirements.txt    # Project dependencies
+
+## 💻 Installation & Usage
+Setup
+Clone the repository:
+
+Bash
+git clone [https://github.com/YourUsername/Adaptive-Lighthouse-Core.git](https://github.com/YourUsername/Adaptive-Lighthouse-Core.git)
+cd Adaptive-Lighthouse-Core/CommandCore
+Install dependencies:
+
+Bash
+pip install -r requirements.txt
+Configure API Key:
+Create a .env file in the root directory:
+
+קטע קוד
+GROQ_API_KEY=your_groq_api_key_here
+Running the App
+To run the Collaborative Round Table (Recommended):
+
+Bash
+streamlit run ui/streamlit_app.py
+To test a single Specialist (CLI Mode):
+
+Bash
+python main.py
