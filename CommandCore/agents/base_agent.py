@@ -73,4 +73,11 @@ ACTIONABLE COLLABORATION PLAN:
 
     def analyze(self, user_input: str, previous_findings: str = "") -> str:
         """Sends the assembled prompt to the LLM and returns the response."""
+        system_instruction = """
+        STRICT DATA RULES:
+        1. If the CURRENT SITUATION is gibberish, random characters, or empty, 
+           REPLY ONLY WITH: "Incomprehensible input." 
+        2. Do NOT establish "baseline" plans or zones (like 500m) if no specific 
+           hazards are mentioned in the input.[cite: 5]
+        """
         return self.llm.generate(self.build_prompt(user_input, previous_findings))
