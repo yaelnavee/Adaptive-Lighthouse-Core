@@ -139,14 +139,16 @@ class CommanderAgent:
         return results
 
     def _build_review_prompt(self, agent_reports: dict, pre_screen: dict) -> str:
-        import agents.commander_agent as _self_module
-        constitution = _self_module.CONSTITUTION
 
+        import agents.commander_agent as _self_module
+
+        constitution = _self_module.CONSTITUTION
         reports_block = "\n".join(
+
             f"  [{agent}]: {text or '(no report)'}"
+
             for agent, text in agent_reports.items()
         )
-
         return f"""You are the COMMANDER AGENT enforcing Constitutional AI.
 
 CONSTITUTION:
@@ -156,16 +158,18 @@ SPECIALIST REPORTS:
 {reports_block}
 
 ### MANDATORY LOGIC:
-1. GIBBERISH CHECK (PRIORITY 1): Examine the specialist reports. If they indicate the input is 
-   random letters, nonsense, or lacks ANY specific incident data, your FINAL_PLAN MUST be exactly:
+1. GIBBERISH CHECK (PRIORITY 1): If the User Input was total nonsense, your FINAL_PLAN MUST be exactly:
    "The event description is unclear. Please provide a clearer description of the incident."
-2. ANTI-HALLUCINATION: VETO any agent that proposes a "500m zone" or specific tactical actions 
-   if the original input did not mention a fire, leak, or explosion.[cite: 5]
-3. LANGUAGE: If reports are Hebrew, the FINAL_PLAN must be Hebrew.[cite: 5]
+2. ANTI-HALLUCINATION: VETO any agent that invents hazards (e.g., "gas leak", "victims") NOT mentioned in the input.
+3. TACTICAL EXPERTISE: Do NOT veto specialists for setting safety perimeters (e.g., 50m, 70m) or choosing equipment. This is their EXPERTISE, not a hallucination.
+4. RADIUS SYNC: If agents propose different distances, prioritize Fire_Bot's radius and align others to it.
+5. LANGUAGE: If reports are Hebrew, the FINAL_PLAN must be Hebrew.
+6. SCALE: VETO disproportional responses (e.g. MCI for a trash fire).
 
 STRICT FORMAT:
 REVIEW:
 <AgentName>: APPROVED or VETO - <Reason>
+...
 FINAL_PLAN:
 <The unified plan OR the mandatory error message>
 """
