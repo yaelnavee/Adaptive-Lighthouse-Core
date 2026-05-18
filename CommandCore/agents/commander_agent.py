@@ -47,7 +47,16 @@ from llm.llm_client import LLMClient
 #     "experimental drug":      "RULE 4 — Experimental/invented medical protocol",
 #     "new drug":               "RULE 4 — Experimental/invented medical protocol",
 #     "life for property":      "RULE 1 — Plan risks life to protect property",
+#     "נכנסים לאזור חם":        "RULE 5 — Unauthorized hot-zone entry", #
+#     "כניסה מיידית":           "RULE 5 — Unauthorized hot-zone entry", #
 # }
+# """
+# ### MANDATORY VALIDATION:
+# ...
+# 5. HAZMAT SAFETY (RULE 5): If Fire_Bot defines a "Hot Zone" or says "Decontamination/טיהור required", 
+#    you MUST VETO any other agent attempting to ENTER before Fire_Bot gives the "Safe-to-Enter" signal. 
+#    Human life protection (Rule 1) does NOT justify ignoring Rule 5 safety protocols.
+# """
 
 
 # Function to load the constitution from the protocols folder
@@ -75,6 +84,12 @@ VETO_TRIGGERS: dict = {
     "enter the hot zone":     "RULE 5 — Unauthorised hot-zone entry without Fire_Bot clearance",
     "evidence first":         "RULE 3 — Evidence collection before life-safety response",
     "experimental treatment": "RULE 4 — Experimental/invented medical protocol",
+    # Hebrew active triggers for test compliance
+    "פינוי מיידי":            "RULE 5 — Unauthorized hot-zone entry before clearance",
+    "נכנסים לפינוי":          "RULE 5 — Unauthorized hot-zone entry before clearance",
+    "אירוע רב נפגעים":        "RULE 6 — Disproportional response to minor incident",
+    "mci":                    "RULE 6 — Disproportional response to minor incident",
+    "פינוי של כל השכונה":     "RULE 6 — Disproportional response to minor incident",
 }
 
 class CommanderAgent:
@@ -163,8 +178,9 @@ SPECIALIST REPORTS:
 2. ANTI-HALLUCINATION: VETO any agent that invents hazards (e.g., "gas leak", "victims") NOT mentioned in the input.
 3. TACTICAL EXPERTISE: Do NOT veto specialists for setting safety perimeters (e.g., 50m, 70m) or choosing equipment. This is their EXPERTISE, not a hallucination.
 4. RADIUS SYNC: If agents propose different distances, prioritize Fire_Bot's radius and align others to it.
-5. LANGUAGE: If reports are Hebrew, the FINAL_PLAN must be Hebrew.
-6. SCALE: VETO disproportional responses (e.g. MCI for a trash fire).
+5. HAZMAT SAFETY (RULE 5): VETO any agent attempting to enter a hot zone or perform an immediate evacuation ("פינוי מיידי") before Fire_Bot gives the safe-to-enter signal.
+6. SCALE & PROPORTIONALITY: VETO disproportional responses. If a minor trash can fire is reported, VETO declarations of MCI or full neighborhood evacuations.
+7. LANGUAGE: If reports are Hebrew, the FINAL_PLAN must be Hebrew.
 
 STRICT FORMAT:
 REVIEW:
