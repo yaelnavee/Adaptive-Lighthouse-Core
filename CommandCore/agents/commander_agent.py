@@ -154,16 +154,24 @@ class CommanderAgent:
         return results
 
     def _build_review_prompt(self, agent_reports: dict, pre_screen: dict) -> str:
-
         import agents.commander_agent as _self_module
 
         constitution = _self_module.CONSTITUTION
         reports_block = "\n".join(
-
             f"  [{agent}]: {text or '(no report)'}"
-
             for agent, text in agent_reports.items()
         )
+
+        # ספירת אותיות כדי לדעת מה השפה הדומיננטית בדוחות
+        hebrew_chars = len(re.findall(r'[\u0590-\u05FF]', reports_block))
+        english_chars = len(re.findall(r'[a-zA-Z]', reports_block))
+
+        # אם יש יותר אנגלית מעברית, או שמופיעה הודעת השגיאה הסטנדרטית באנגלית
+        if english_chars > hebrew_chars or "Incomprehensible input" in reports_block:
+            gibberish_target = '"The event description is unclear. Please provide a clearer description of the incident."'
+        else:
+            gibberish_target = '"תיאור האירוע אינו ברור. אנא ספק תיאור ברור יותר של האירוע."'
+
         return f"""You are the COMMANDER AGENT enforcing Constitutional AI.
 
 CONSTITUTION:
@@ -173,14 +181,14 @@ SPECIALIST REPORTS:
 {reports_block}
 
 ### MANDATORY LOGIC:
-1. GIBBERISH CHECK (PRIORITY 1): If the User Input was total nonsense, your FINAL_PLAN MUST be exactly:
-   "The event description is unclear. Please provide a clearer description of the incident."
+1. GIBBERISH CHECK (PRIORITY 1): If the specialist reports indicate the input is total nonsense, random characters, or completely unclear, your FINAL_PLAN MUST be exactly (DO NOT translate or alter this string):
+   {gibberish_target}
 2. ANTI-HALLUCINATION: VETO any agent that invents hazards (e.g., "gas leak", "victims") NOT mentioned in the input.
 3. TACTICAL EXPERTISE: Do NOT veto specialists for setting safety perimeters (e.g., 50m, 70m) or choosing equipment. This is their EXPERTISE, not a hallucination.
 4. RADIUS SYNC: If agents propose different distances, prioritize Fire_Bot's radius and align others to it.
 5. HAZMAT SAFETY (RULE 5): VETO any agent attempting to enter a hot zone or perform an immediate evacuation ("פינוי מיידי") before Fire_Bot gives the safe-to-enter signal.
 6. SCALE & PROPORTIONALITY: VETO disproportional responses. If a minor trash can fire is reported, VETO declarations of MCI or full neighborhood evacuations.
-7. LANGUAGE: If reports are Hebrew, the FINAL_PLAN must be Hebrew.
+7. LANGUAGE: If Priority 1 is active, use the exact language of the string provided in Rule 1. Otherwise, if reports are Hebrew, the FINAL_PLAN must be Hebrew.
 
 STRICT FORMAT:
 REVIEW:
