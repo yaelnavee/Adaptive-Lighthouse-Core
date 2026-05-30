@@ -16,9 +16,10 @@ To add or modify rules:
 """
 
 import re
-import os  # Added missing import
+import os
 from typing import Optional
 from llm.llm_client import LLMClient
+from agents.base_agent import UNCLEAR_RESPONSE_EN, UNCLEAR_RESPONSE_HE
 
 # # ---------------------------------------------------------------------------
 # # THE CONSTITUTION — plain-English rules. Keep the "RULE N:" prefix so tests
@@ -162,15 +163,13 @@ class CommanderAgent:
             for agent, text in agent_reports.items()
         )
 
-        # ספירת אותיות כדי לדעת מה השפה הדומיננטית בדוחות
         hebrew_chars = len(re.findall(r'[\u0590-\u05FF]', reports_block))
         english_chars = len(re.findall(r'[a-zA-Z]', reports_block))
 
-        # אם יש יותר אנגלית מעברית, או שמופיעה הודעת השגיאה הסטנדרטית באנגלית
-        if english_chars > hebrew_chars or "Incomprehensible input" in reports_block:
-            gibberish_target = '"The event description is unclear. Please provide a clearer description of the incident."'
+        if english_chars >= hebrew_chars or "Incomprehensible input" in reports_block:
+            gibberish_target = UNCLEAR_RESPONSE_EN
         else:
-            gibberish_target = '"תיאור האירוע אינו ברור. אנא ספק תיאור ברור יותר של האירוע."'
+            gibberish_target = UNCLEAR_RESPONSE_HE
 
         return f"""You are the COMMANDER AGENT enforcing Constitutional AI.
 
@@ -181,14 +180,16 @@ SPECIALIST REPORTS:
 {reports_block}
 
 ### MANDATORY LOGIC:
-1. GIBBERISH CHECK (PRIORITY 1): If the specialist reports indicate the input is total nonsense, random characters, or completely unclear, your FINAL_PLAN MUST be exactly (DO NOT translate or alter this string):
-   {gibberish_target}
+1. GIBBERISH CHECK (PRIORITY 1): If the specialist reports indicate the input is total nonsense, random characters, or completely unclear, your FINAL_PLAN MUST be EXACTLY the following text — copy it verbatim, do NOT translate, summarize, or alter it in any way:
+---
+{gibberish_target}
+---
 2. ANTI-HALLUCINATION: VETO any agent that invents hazards (e.g., "gas leak", "victims") NOT mentioned in the input.
 3. TACTICAL EXPERTISE: Do NOT veto specialists for setting safety perimeters (e.g., 50m, 70m) or choosing equipment. This is their EXPERTISE, not a hallucination.
 4. RADIUS SYNC: If agents propose different distances, prioritize Fire_Bot's radius and align others to it.
 5. HAZMAT SAFETY (RULE 5): VETO any agent attempting to enter a hot zone or perform an immediate evacuation ("פינוי מיידי") before Fire_Bot gives the safe-to-enter signal.
 6. SCALE & PROPORTIONALITY: VETO disproportional responses. If a minor trash can fire is reported, VETO declarations of MCI or full neighborhood evacuations.
-7. LANGUAGE: If Priority 1 is active, use the exact language of the string provided in Rule 1. Otherwise, if reports are Hebrew, the FINAL_PLAN must be Hebrew.
+7. LANGUAGE: If Priority 1 is active, use the exact language of the string provided in Rule 1. Otherwise, detect the dominant language of the specialist reports and respond in the SAME language — Hebrew if reports are predominantly Hebrew, English if predominantly English.
 
 STRICT FORMAT:
 REVIEW:

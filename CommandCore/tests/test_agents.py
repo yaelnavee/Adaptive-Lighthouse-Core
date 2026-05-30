@@ -48,9 +48,16 @@ class TestSpecialistAgents(unittest.TestCase):
     # ------------------------------------------------------------------
     def test_language_instruction_in_prompt(self):
         agent = SpecialistFactory.create("medical", self.mock_llm)
-        prompt = agent.build_prompt("עזרה דחופה")
-        self.assertIn("LANGUAGE MATCHING (Critical)", prompt)
-        self.assertIn("If the user input is in HEBREW, your entire response MUST be in HEBREW", prompt)
+        hebrew_prompt = agent.build_prompt("עזרה דחופה")
+        # Hard mandate at the top (deterministic — Python-detected, not LLM-inferred)
+        self.assertIn("ABSOLUTE LANGUAGE MANDATE", hebrew_prompt)
+        self.assertIn("YOUR ENTIRE RESPONSE MUST BE IN HEBREW", hebrew_prompt)
+        # Fallback instruction block still present
+        self.assertIn("LANGUAGE MATCHING (Critical)", hebrew_prompt)
+        self.assertIn("If the user input is in HEBREW, your entire response MUST be in HEBREW", hebrew_prompt)
+        # English input must mandate ENGLISH
+        english_prompt = agent.build_prompt("Help needed")
+        self.assertIn("YOUR ENTIRE RESPONSE MUST BE IN ENGLISH", english_prompt)
 
     # ------------------------------------------------------------------
     # 4. Brevity constraint in prompt
