@@ -53,9 +53,9 @@ class BaseAgent(ABC):
 
     @staticmethod
     def _is_gibberish(text: str) -> bool:
-        """Returns True if text has fewer than 2 meaningful letters (Hebrew or Latin)."""
+        """Returns True only if text contains fewer than 2 readable Hebrew or Latin letters."""
         stripped = text.strip()
-        if len(stripped) < 3:
+        if not stripped:
             return True
         return len(re.findall(r'[֐-׿a-zA-Z]', stripped)) < 2
 

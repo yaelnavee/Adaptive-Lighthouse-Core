@@ -88,6 +88,31 @@ class TestSpecialistAgents(unittest.TestCase):
         self.assertIn("SITUATION:", prompt)
         self.assertIn("ACTIONABLE COLLABORATION PLAN:", prompt)
 
+    # ------------------------------------------------------------------
+    # 7. Gibberish detection — valid Hebrew must never be rejected
+    # ------------------------------------------------------------------
+    def test_gibberish_accepts_valid_hebrew_sentence(self):
+        """A well-formed Hebrew incident description must not be flagged as gibberish."""
+        valid_hebrew = "התפוצץ צינור גז ברחוב עמוס בתל אביב, טרם דווח על נפגעים"
+        self.assertFalse(BaseAgent._is_gibberish(valid_hebrew))
+
+    def test_gibberish_accepts_short_hebrew_word(self):
+        """Two-character Hebrew words are valid inputs and must not be rejected."""
+        self.assertFalse(BaseAgent._is_gibberish("אש"))
+
+    def test_gibberish_rejects_symbols_only(self):
+        self.assertTrue(BaseAgent._is_gibberish("!!!"))
+
+    def test_gibberish_rejects_empty_and_whitespace(self):
+        self.assertTrue(BaseAgent._is_gibberish(""))
+        self.assertTrue(BaseAgent._is_gibberish("   "))
+
+    def test_gibberish_rejects_digits_only(self):
+        self.assertTrue(BaseAgent._is_gibberish("12345"))
+
+    def test_gibberish_accepts_valid_english_sentence(self):
+        self.assertFalse(BaseAgent._is_gibberish("Gas pipe explosion on Main Street"))
+
 
 if __name__ == "__main__":
     unittest.main()
