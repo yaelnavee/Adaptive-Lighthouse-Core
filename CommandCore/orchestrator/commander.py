@@ -24,6 +24,6 @@ class IncidentOrchestrator:
         
         # Call the correct method name from CommanderAgent
         result = self.commander.review_and_synthesize(formatted_responses)
-        return result["final_plan"][cite: 5]
+        return result["final_plan"]
     
     

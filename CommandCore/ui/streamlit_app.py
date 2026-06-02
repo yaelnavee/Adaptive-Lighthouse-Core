@@ -1,11 +1,14 @@
 """
 Command Core — Streamlit UI
 ============================
-Milestone 3 — The Constitution: full integration of CommanderAgent with:
+Milestone 4 — The Consensus Engine: full integration of ConsensusEngine with:
+  - Urgency score badges per specialist (🔴/🟠/🟡/🟢)
+  - Conflict resolution panel showing which conflicts were detected and how they resolved
+  - Single unified "Unified Command Decision" replacing the old "Final Plan"
   - Parallel specialist analysis (ThreadPoolExecutor)
   - Two-stage Constitutional review (pre-screen + LLM)
   - Veto audit log display
-  - Live Constitution editor in the sidebar (changes apply immediately)
+  - Live Constitution editor in the sidebar
   - Field report upload (max 2 MB)
 """
 
@@ -16,29 +19,29 @@ import json
 import concurrent.futures
 from datetime import datetime
 
-# Ensure project root is on the path when running from the ui/ directory
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from agents.agent_factory import SpecialistFactory
 from agents.commander_agent import CommanderAgent, CONSTITUTION, VETO_TRIGGERS
 from llm.llm_client import LLMClient
 
-# ---------------------------------------------------------------------------
-# File upload limit (bytes) — change this constant to adjust
-# ---------------------------------------------------------------------------
 MAX_UPLOAD_BYTES = 2 * 1024 * 1024  # 2 MB
 
-# ---------------------------------------------------------------------------
-# Page setup
-# ---------------------------------------------------------------------------
+_URGENCY_BADGE = {
+    "CRITICAL": "🔴",
+    "HIGH":     "🟠",
+    "MEDIUM":   "🟡",
+    "LOW":      "🟢",
+}
+
 st.set_page_config(
-    page_title="Command Core — M3 Constitution",
+    page_title="Command Core — M4 Consensus Engine",
     page_icon="⚖️",
     layout="wide",
 )
 
 # ---------------------------------------------------------------------------
-# Session state initialisation
+# Session state
 # ---------------------------------------------------------------------------
 if "llm" not in st.session_state:
     st.session_state.llm = LLMClient()
@@ -46,7 +49,6 @@ if "llm" not in st.session_state:
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
-# Allow the Constitution text to be edited live without restarting the app
 if "constitution_text" not in st.session_state:
     st.session_state.constitution_text = CONSTITUTION
 
@@ -55,10 +57,9 @@ if "veto_triggers" not in st.session_state:
 
 
 # ---------------------------------------------------------------------------
-# Helper: run a single specialist agent (used inside the thread pool)
+# Helper: run a single specialist agent inside the thread pool
 # ---------------------------------------------------------------------------
 def _run_agent(agent_type: str, prompt: str, history_context: str, llm_client) -> dict:
-    """Instantiate an agent and return its name + response."""
     agent = SpecialistFactory.create(agent_type, llm_client)
     response = agent.analyze(prompt, previous_findings=history_context)
     return {"name": agent.name, "response": response, "type": agent_type}
@@ -70,12 +71,11 @@ def _run_agent(agent_type: str, prompt: str, history_context: str, llm_client) -
 def process_event(event_text: str):
     """
     1. Run all specialist agents in parallel.
-    2. Pass their reports to CommanderAgent for constitutional review.
-    3. Display granular results (per-agent status + veto log + final plan).
+    2. Pass their reports to CommanderAgent for consensus + constitutional review.
+    3. Display urgency scores, conflict resolutions, veto log, and unified decision.
     """
     st.session_state.chat_history.append({"role": "user", "content": event_text})
 
-    # Build conversation history context (excluding current message)
     history_context = "\n".join(
         f"{m['role']}: {m['content']}"
         for m in st.session_state.chat_history[:-1]
@@ -96,33 +96,28 @@ def process_event(event_text: str):
                 result = future.result()
                 agent_reports[result["name"]] = result["response"]
 
-    # --- Stage 2: Constitutional review ---
-    # Patch the commander to use any live-edited constitution / triggers
+    # --- Stage 2: Consensus Engine + Constitutional review ---
     commander = CommanderAgent(llm)
-    commander._live_constitution = st.session_state.constitution_text
-    commander._live_triggers = st.session_state.veto_triggers
 
-    # Monkey-patch CONSTITUTION and VETO_TRIGGERS for this run
     import agents.commander_agent as _ca_module
     original_constitution = _ca_module.CONSTITUTION
     original_triggers = _ca_module.VETO_TRIGGERS
     _ca_module.CONSTITUTION = st.session_state.constitution_text
     _ca_module.VETO_TRIGGERS = st.session_state.veto_triggers
 
-    with st.spinner("⚖️ Commander reviewing against the Constitution..."):
+    with st.spinner("⚖️ Commander synthesising consensus decision..."):
         review_result = commander.review_and_synthesize(agent_reports)
 
-    # Restore originals
     _ca_module.CONSTITUTION = original_constitution
     _ca_module.VETO_TRIGGERS = original_triggers
 
-    # --- Build rich assistant message ---
-    reviews = review_result["reviews"]
-    final_plan = review_result["final_plan"]
-    veto_log = review_result["veto_log"]
+    reviews        = review_result["reviews"]
+    final_plan     = review_result["final_plan"]
+    veto_log       = review_result["veto_log"]
+    urgency_scores = review_result.get("urgency_scores", {})
+    conflicts      = review_result.get("conflicts", [])
 
-    # --- Build the specialist reports block (collapsible per agent) ---
-    # Stored separately so the UI can render them as expanders
+    # --- Build specialist entries (with urgency badges) ---
     agent_icons = {"Fire_Bot": "🔥", "Police_Bot": "🚔", "Med_Bot": "🏥"}
 
     specialist_entries = []
@@ -131,21 +126,31 @@ def process_event(event_text: str):
         verdict_icon = "🔴 VETO" if review.get("vetoed") else "✅ APPROVED"
         reason = f" — {review.get('reason', '')}" if review.get("reason") else ""
         icon = agent_icons.get(agent_name, "🤖")
+
+        urgency = urgency_scores.get(agent_name)
+        urgency_str = ""
+        if urgency:
+            badge = _URGENCY_BADGE.get(urgency.label, "⚪")
+            urgency_str = f" {badge} {urgency.score:.1f}"
+
         specialist_entries.append({
-            "name": agent_name,
-            "icon": icon,
-            "verdict": verdict_icon,
-            "reason": reason,
-            "report": report_text,
+            "name":          agent_name,
+            "icon":          icon,
+            "verdict":       verdict_icon,
+            "reason":        reason,
+            "report":        report_text,
+            "urgency_str":   urgency_str,
+            "urgency_label": urgency.label if urgency else "N/A",
+            "urgency_score": urgency.score if urgency else None,
         })
 
-    # Per-agent status summary (one line each, always visible)
+    # --- Status summary lines ---
     status_lines = [
-        f"- {e['icon']} **{e['name']}**: {e['verdict']}{e['reason']}"
+        f"- {e['icon']} **{e['name']}**{e['urgency_str']}: {e['verdict']}{e['reason']}"
         for e in specialist_entries
     ]
 
-    # Veto log block
+    # --- Veto log block ---
     veto_section = ""
     if veto_log:
         veto_entries = "\n".join(
@@ -154,22 +159,33 @@ def process_event(event_text: str):
         )
         veto_section = f"\n\n**📋 Veto Audit Log:**\n{veto_entries}"
 
-    # Specialist reports block (stored as JSON string, rendered as expanders in chat)
-    import json as _json
-    specialists_json = _json.dumps(specialist_entries)
+    # --- Conflict resolution block ---
+    conflicts_section = ""
+    if conflicts:
+        conflict_lines = []
+        for c in conflicts:
+            conflict_lines.append(
+                f"  - **[{c.topic.upper()}]** `{c.agent_a}` ({c.stance_a}) vs "
+                f"`{c.agent_b}` ({c.stance_b}) → ✅ **{c.winner}** wins "
+                f"— _{c.resolution_reason}_"
+            )
+        conflicts_section = "\n\n**⚖️ Conflict Resolutions:**\n" + "\n".join(conflict_lines)
+
+    specialists_json = json.dumps(specialist_entries)
 
     content = (
         "### 🎖️ Commander Review\n"
         + "\n".join(status_lines)
         + veto_section
-        + f"\n\n---\n### 🗺️ Final Plan\n{final_plan}"
+        + conflicts_section
+        + f"\n\n---\n### 🎯 Unified Command Decision\n{final_plan}"
         + f"\n\n<!-- SPECIALISTS:{specialists_json} -->"
     )
 
     st.session_state.chat_history.append({
-        "role": "assistant",
-        "content": content,
-        "avatar": "⚖️",
+        "role":        "assistant",
+        "content":     content,
+        "avatar":      "⚖️",
         "specialists": specialist_entries,
     })
     st.rerun()
@@ -187,7 +203,6 @@ with st.sidebar:
 
     st.markdown("---")
 
-    # --- Live Constitution Editor ---
     with st.expander("⚖️ Edit Constitution", expanded=False):
         st.caption(
             "Modify rules directly. Changes apply to the **next** event processed. "
@@ -203,7 +218,6 @@ with st.sidebar:
             st.session_state.constitution_text = edited_constitution
             st.success("✓ Constitution updated.")
 
-    # --- Veto Trigger Editor ---
     with st.expander("🔍 Edit Veto Triggers", expanded=False):
         st.caption(
             "JSON object — keys are phrases to detect (case-insensitive), "
@@ -226,7 +240,6 @@ with st.sidebar:
 
     st.markdown("---")
 
-    # --- Field Report Upload (max 2 MB) ---
     st.subheader("📁 Upload Field Report")
     st.caption(f"Accepted: .txt / .md — max {MAX_UPLOAD_BYTES // (1024*1024)} MB")
 
@@ -237,7 +250,6 @@ with st.sidebar:
     )
 
     if uploaded_file is not None:
-        # Enforce size limit
         file_bytes = uploaded_file.read()
         if len(file_bytes) > MAX_UPLOAD_BYTES:
             size_mb = len(file_bytes) / (1024 * 1024)
@@ -251,14 +263,17 @@ with st.sidebar:
                 formatted_report = f"📄 **FIELD REPORT UPLOADED:**\n\n{file_content}"
                 process_event(formatted_report)
 
+    st.markdown("---")
+    st.caption("**Urgency legend:** 🔴 Critical · 🟠 High · 🟡 Medium · 🟢 Low")
+
+
 # ---------------------------------------------------------------------------
 # Main chat area
 # ---------------------------------------------------------------------------
-st.title("⚖️ Command Core — Constitutional AI")
-st.caption("Milestone 3: The Constitution | Parallel Execution + Veto Engine")
+st.title("⚖️ Command Core — Consensus Engine")
+st.caption("Milestone 4: Urgency Scoring · Conflict Resolution · Unified Command Decision")
 
 for message in st.session_state.chat_history:
-    # Strip the hidden specialist data marker before rendering markdown
     display_content = message["content"]
     if "<!-- SPECIALISTS:" in display_content:
         display_content = display_content[:display_content.rfind("\n\n<!-- SPECIALISTS:")]
@@ -266,14 +281,14 @@ for message in st.session_state.chat_history:
     with st.chat_message(message["role"], avatar=message.get("avatar")):
         st.markdown(display_content)
 
-        # Render per-agent collapsible reports for assistant messages
         if message["role"] == "assistant" and message.get("specialists"):
             st.markdown("**🔍 Specialist Reports (expand to read each analysis):**")
             cols = st.columns(len(message["specialists"]))
             for col, entry in zip(cols, message["specialists"]):
                 verdict_color = "🔴" if "VETO" in entry["verdict"] else "✅"
+                urgency_str = entry.get("urgency_str", "")
                 with col:
-                    with st.expander(f"{entry['icon']} {entry['name']} {verdict_color}"):
+                    with st.expander(f"{entry['icon']} {entry['name']}{urgency_str} {verdict_color}"):
                         st.markdown(entry["report"])
 
 if prompt := st.chat_input("Describe the incident..."):
@@ -282,6 +297,6 @@ if prompt := st.chat_input("Describe the incident..."):
 st.markdown("---")
 st.caption(
     f"Last update: {datetime.now().strftime('%H:%M:%S')} | "
-    "Parallel execution + Constitutional AI | "
+    "Parallel execution · Constitutional AI · Consensus Engine | "
     f"Upload limit: {MAX_UPLOAD_BYTES // (1024*1024)} MB"
 )
