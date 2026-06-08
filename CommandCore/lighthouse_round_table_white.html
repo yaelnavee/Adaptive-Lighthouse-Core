@@ -1,0 +1,666 @@
+
+<style>
+  #rt-wrap {
+    background: #fff;
+    width: 100%;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    padding: 0;
+  }
+  #rt-canvas-wrap {
+    position: relative;
+    width: 100%;
+    height: 560px;
+    background: #fff;
+  }
+  #rt-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+  #rt-svg   { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+
+  .rt-agent {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    pointer-events: all;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+  }
+  .rt-circle {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #5bbfff, #1565c0 60%, #0d3a8a);
+    border: 2.5px solid #4aa3ee;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 0 6px rgba(74,163,238,0.18), 0 0 24px rgba(21,101,192,0.22);
+    transition: box-shadow 0.3s, transform 0.2s;
+    position: relative;
+  }
+  .rt-circle.speaking {
+    box-shadow: 0 0 0 8px rgba(74,163,238,0.32), 0 0 36px rgba(74,163,238,0.5), 0 0 70px rgba(74,163,238,0.2);
+    transform: scale(1.08);
+  }
+  .rt-circle.listening {
+    box-shadow: 0 0 0 5px rgba(74,163,238,0.1), 0 0 14px rgba(21,101,192,0.1);
+    opacity: 0.75;
+  }
+  .rt-label-top {
+    font-size: 10px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    line-height: 1.1;
+    text-align: center;
+    margin-bottom: 1px;
+  }
+  .rt-label-bot {
+    font-size: 9px;
+    color: rgba(255,255,255,0.75);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    text-align: center;
+    line-height: 1.1;
+  }
+  .rt-name {
+    margin-top: 7px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #1a5fa8;
+    text-align: center;
+    line-height: 1.2;
+  }
+  .rt-status {
+    font-size: 9px;
+    color: #5a9ad4;
+    letter-spacing: 0.5px;
+    margin-top: 2px;
+    text-align: center;
+    height: 12px;
+    font-family: monospace;
+  }
+
+  .rt-commander .rt-circle {
+    width: 96px;
+    height: 96px;
+    background: radial-gradient(circle at 35% 35%, #7dd4ff, #1361c4 55%, #08266b);
+    border: 3px solid #5bbfff;
+    box-shadow: 0 0 0 10px rgba(91,191,255,0.18), 0 0 40px rgba(21,97,196,0.3);
+  }
+  .rt-commander .rt-circle.speaking {
+    box-shadow: 0 0 0 14px rgba(91,191,255,0.3), 0 0 60px rgba(91,191,255,0.5), 0 0 100px rgba(91,191,255,0.15);
+  }
+  .rt-commander .rt-label-top { font-size: 12px; letter-spacing: 2px; }
+  .rt-commander .rt-name { font-size: 11px; color: #0d3a8a; }
+
+  .speaking-ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 1.5px solid rgba(74,163,238,0.5);
+    animation: expandRing 1.4s ease-out infinite;
+    pointer-events: none;
+  }
+  @keyframes expandRing {
+    0%  { transform: scale(1);   opacity: 0.7; }
+    100%{ transform: scale(1.9); opacity: 0; }
+  }
+
+  .rt-msg-bubble {
+    position: absolute;
+    background: #fff;
+    border: 1.5px solid #4aa3ee;
+    border-radius: 10px;
+    padding: 7px 11px;
+    font-size: 11px;
+    color: #1a3a6a;
+    max-width: 170px;
+    line-height: 1.45;
+    box-shadow: 0 2px 10px rgba(74,163,238,0.15);
+    z-index: 20;
+    opacity: 0;
+    transform: scale(0.85);
+    transition: opacity 0.3s, transform 0.3s;
+    pointer-events: none;
+  }
+  .rt-msg-bubble.show { opacity: 1; transform: scale(1); }
+  .rt-msg-bubble::before {
+    content: '';
+    position: absolute;
+    width: 8px; height: 8px;
+    background: #fff;
+    border-left: 1.5px solid #4aa3ee;
+    border-bottom: 1.5px solid #4aa3ee;
+    transform: rotate(-45deg);
+  }
+
+  .rt-incident {
+    border-top: 1px solid #e3edf8;
+    padding: 14px 20px 10px;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .rt-incident-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+  }
+  .rt-input-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .rt-input-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #5a8ac0;
+  }
+  #rt-incident-input {
+    border: 1.5px solid #c5dcf0;
+    border-radius: 8px;
+    padding: 9px 14px;
+    font-size: 13px;
+    color: #1a3a6a;
+    background: #f5faff;
+    outline: none;
+    font-family: inherit;
+    transition: border-color 0.2s;
+    width: 100%;
+  }
+  #rt-incident-input:focus { border-color: #4aa3ee; background: #fff; }
+  .rt-btn {
+    padding: 9px 18px;
+    border-radius: 8px;
+    border: none;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+    white-space: nowrap;
+  }
+  .rt-btn-primary {
+    background: linear-gradient(135deg, #3a8eff, #1361c4);
+    color: #fff;
+    box-shadow: 0 2px 10px rgba(58,142,255,0.3);
+  }
+  .rt-btn-primary:hover { background: linear-gradient(135deg, #5ba8ff, #1a6fe0); }
+  .rt-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+  .rt-btn-reset {
+    background: #f0f6ff;
+    color: #3a7acc;
+    border: 1.5px solid #c5dcf0;
+  }
+  .rt-btn-reset:hover { background: #e0eeff; }
+
+  .rt-log {
+    margin: 0 20px 14px;
+    border: 1px solid #e3edf8;
+    border-radius: 8px;
+    background: #f8fbff;
+    padding: 10px 14px;
+    min-height: 44px;
+    max-height: 90px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    scrollbar-width: thin;
+  }
+  .rt-log-line {
+    font-size: 11.5px;
+    color: #1a3a6a;
+    line-height: 1.5;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: all 0.35s;
+  }
+  .rt-log-line.show { opacity: 1; transform: none; }
+  .rt-log-line span.lbl {
+    font-weight: 700;
+    font-size: 10px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-right: 5px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: rgba(74,163,238,0.12);
+    color: #1565c0;
+  }
+</style>
+
+<div id="rt-wrap">
+  <div id="rt-canvas-wrap">
+    <canvas id="rt-canvas"></canvas>
+    <svg id="rt-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+
+    <div class="rt-agent rt-commander" id="ag-commander" style="left:50%;top:50%">
+      <div class="rt-circle" id="circ-commander">
+        <div class="speaking-ring" id="ring-commander" style="width:96px;height:96px;display:none"></div>
+        <div class="rt-label-top">COMMANDER</div>
+      </div>
+      <div class="rt-name">Commander</div>
+      <div class="rt-status" id="st-commander"></div>
+    </div>
+
+    <div class="rt-agent" id="ag-fire" style="left:50%;top:12%">
+      <div class="rt-circle" id="circ-fire">
+        <div class="speaking-ring" id="ring-fire" style="width:80px;height:80px;display:none"></div>
+        <div class="rt-label-top">FIRE</div>
+        <div class="rt-label-bot">AGENT</div>
+      </div>
+      <div class="rt-name">Fire</div>
+      <div class="rt-status" id="st-fire"></div>
+    </div>
+
+    <div class="rt-agent" id="ag-medical" style="left:82%;top:27%">
+      <div class="rt-circle" id="circ-medical">
+        <div class="speaking-ring" id="ring-medical" style="width:80px;height:80px;display:none"></div>
+        <div class="rt-label-top">MEDICAL</div>
+        <div class="rt-label-bot">AGENT</div>
+      </div>
+      <div class="rt-name">Medical</div>
+      <div class="rt-status" id="st-medical"></div>
+    </div>
+
+    <div class="rt-agent" id="ag-intelligence" style="left:88%;top:65%">
+      <div class="rt-circle" id="circ-intelligence">
+        <div class="speaking-ring" id="ring-intelligence" style="width:80px;height:80px;display:none"></div>
+        <div class="rt-label-top">INTELLI-</div>
+        <div class="rt-label-bot">GENCE</div>
+      </div>
+      <div class="rt-name">Intelligence</div>
+      <div class="rt-status" id="st-intelligence"></div>
+    </div>
+
+    <div class="rt-agent" id="ag-logistics" style="left:65%;top:91%">
+      <div class="rt-circle" id="circ-logistics">
+        <div class="speaking-ring" id="ring-logistics" style="width:80px;height:80px;display:none"></div>
+        <div class="rt-label-top">LOGISTICS</div>
+        <div class="rt-label-bot">AGENT</div>
+      </div>
+      <div class="rt-name">Logistics</div>
+      <div class="rt-status" id="st-logistics"></div>
+    </div>
+
+    <div class="rt-agent" id="ag-engineering" style="left:20%;top:80%">
+      <div class="rt-circle" id="circ-engineering">
+        <div class="speaking-ring" id="ring-engineering" style="width:80px;height:80px;display:none"></div>
+        <div class="rt-label-top">ENGINEER</div>
+        <div class="rt-label-bot">AGENT</div>
+      </div>
+      <div class="rt-name">Engineering</div>
+      <div class="rt-status" id="st-engineering"></div>
+    </div>
+
+    <div class="rt-agent" id="ag-police" style="left:12%;top:38%">
+      <div class="rt-circle" id="circ-police">
+        <div class="speaking-ring" id="ring-police" style="width:80px;height:80px;display:none"></div>
+        <div class="rt-label-top">POLICE</div>
+        <div class="rt-label-bot">AGENT</div>
+      </div>
+      <div class="rt-name">Police</div>
+      <div class="rt-status" id="st-police"></div>
+    </div>
+
+    <div class="rt-msg-bubble" id="msg-bubble"></div>
+  </div>
+
+  <div class="rt-log" id="rt-log">
+    <div class="rt-log-line show" style="color:#8ab0d4;font-style:italic;font-size:11px">Enter an incident below and press Activate...</div>
+  </div>
+
+  <div class="rt-incident">
+    <div class="rt-incident-row">
+      <div class="rt-input-wrap">
+        <div class="rt-input-label">Active Incident</div>
+        <input id="rt-incident-input" type="text" value="Industrial fire — building collapse, 5 workers trapped" placeholder="Describe the incident..." />
+      </div>
+      <button class="rt-btn rt-btn-primary" id="rt-run-btn" onclick="runSimulation()">Activate</button>
+      <button class="rt-btn rt-btn-reset" onclick="resetSim()">Reset</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const AGENTS = ['fire','medical','intelligence','logistics','engineering','police'];
+const ALL = ['commander', ...AGENTS];
+
+let running = false;
+let animFrames = [];
+
+function getPos(id) {
+  const el = document.getElementById('ag-' + id);
+  const wrap = document.getElementById('rt-canvas-wrap');
+  if (!el || !wrap) return {x:0,y:0};
+  const wr = wrap.getBoundingClientRect();
+  const er = el.getBoundingClientRect();
+  return {
+    x: er.left + er.width/2 - wr.left,
+    y: er.top + er.height/2 - wr.top
+  };
+}
+
+function drawBg() {
+  const cv = document.getElementById('rt-canvas');
+  const wrap = document.getElementById('rt-canvas-wrap');
+  cv.width = wrap.offsetWidth;
+  cv.height = wrap.offsetHeight;
+  const ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+  ctx.clearRect(0,0,W,H);
+
+  const cx = W/2, cy = H/2;
+
+  const outerR = Math.min(W,H) * 0.40;
+  ctx.beginPath();
+  ctx.arc(cx, cy, outerR, 0, Math.PI*2);
+  ctx.strokeStyle = 'rgba(74,163,238,0.18)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([5,5]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  const innerR = Math.min(W,H) * 0.26;
+  ctx.beginPath();
+  ctx.arc(cx, cy, innerR, 0, Math.PI*2);
+  ctx.strokeStyle = 'rgba(74,163,238,0.10)';
+  ctx.lineWidth = 0.8;
+  ctx.stroke();
+}
+
+function clearSvgLines() {
+  const svg = document.getElementById('rt-svg');
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+}
+
+function drawStaticLines() {
+  clearSvgLines();
+  const svg = document.getElementById('rt-svg');
+
+  const defs = document.createElementNS('http://www.w3.org/2000/svg','defs');
+  const mk = document.createElementNS('http://www.w3.org/2000/svg','marker');
+  mk.setAttribute('id','arrowBlue');
+  mk.setAttribute('viewBox','0 0 10 10');
+  mk.setAttribute('refX','8'); mk.setAttribute('refY','5');
+  mk.setAttribute('markerWidth','5'); mk.setAttribute('markerHeight','5');
+  mk.setAttribute('orient','auto-start-reverse');
+  const mp = document.createElementNS('http://www.w3.org/2000/svg','path');
+  mp.setAttribute('d','M2 1L8 5L2 9');
+  mp.setAttribute('fill','none');
+  mp.setAttribute('stroke','#4aa3ee');
+  mp.setAttribute('stroke-width','1.5');
+  mk.appendChild(mp); defs.appendChild(mk);
+
+  const mkA = document.createElementNS('http://www.w3.org/2000/svg','marker');
+  mkA.setAttribute('id','arrowActive');
+  mkA.setAttribute('viewBox','0 0 10 10');
+  mkA.setAttribute('refX','8'); mkA.setAttribute('refY','5');
+  mkA.setAttribute('markerWidth','5'); mkA.setAttribute('markerHeight','5');
+  mkA.setAttribute('orient','auto-start-reverse');
+  const mp2 = document.createElementNS('http://www.w3.org/2000/svg','path');
+  mp2.setAttribute('d','M2 1L8 5L2 9');
+  mp2.setAttribute('fill','none');
+  mp2.setAttribute('stroke','#1361c4');
+  mp2.setAttribute('stroke-width','1.8');
+  mkA.appendChild(mp2); defs.appendChild(mkA);
+
+  svg.appendChild(defs);
+
+  const cmd = getPos('commander');
+
+  AGENTS.forEach(id => {
+    const ag = getPos(id);
+    const dx = ag.x - cmd.x, dy = ag.y - cmd.y;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    const r1 = 48, r2 = 40;
+    const x1 = cmd.x + dx/dist*r1, y1 = cmd.y + dy/dist*r1;
+    const x2 = ag.x - dx/dist*r2, y2 = ag.y - dy/dist*r2;
+
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+    line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+    line.setAttribute('stroke','#c5dcf0');
+    line.setAttribute('stroke-width','1');
+    line.setAttribute('stroke-dasharray','4 4');
+    line.setAttribute('marker-end','url(#arrowBlue)');
+    line.setAttribute('marker-start','url(#arrowBlue)');
+    line.setAttribute('id','line-'+id);
+    svg.appendChild(line);
+  });
+}
+
+function activateLine(fromId, toId, animated) {
+  const svg = document.getElementById('rt-svg');
+  const from = getPos(fromId), to = getPos(toId);
+  const dx = to.x - from.x, dy = to.y - from.y;
+  const dist = Math.sqrt(dx*dx+dy*dy);
+  const r1 = fromId === 'commander' ? 50 : 42;
+  const r2 = toId === 'commander' ? 50 : 42;
+  const x1 = from.x + dx/dist*r1, y1 = from.y + dy/dist*r1;
+  const x2 = to.x - dx/dist*r2, y2 = to.y - dy/dist*r2;
+
+  const id = 'active-line-' + fromId + '-' + toId;
+  let line = document.getElementById(id);
+  if (!line) {
+    line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('id', id);
+    svg.appendChild(line);
+  }
+  line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+  line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+  line.setAttribute('stroke','#1565c0');
+  line.setAttribute('stroke-width', animated ? '2.2' : '1.5');
+  line.setAttribute('stroke-opacity', animated ? '0.85' : '0.4');
+  line.setAttribute('marker-end','url(#arrowActive)');
+
+  if (animated) {
+    const length = Math.sqrt((x2-x1)**2 + (y2-y1)**2);
+    line.setAttribute('stroke-dasharray','8 5');
+    const anim = document.createElementNS('http://www.w3.org/2000/svg','animateTransform');
+    anim.setAttribute('attributeName','stroke-dashoffset');
+    const a2 = document.createElementNS('http://www.w3.org/2000/svg','animate');
+    a2.setAttribute('attributeName','stroke-dashoffset');
+    a2.setAttribute('from','0'); a2.setAttribute('to', String(-length));
+    a2.setAttribute('dur','0.7s'); a2.setAttribute('repeatCount','indefinite');
+    line.innerHTML = '';
+    line.appendChild(a2);
+  } else {
+    line.setAttribute('stroke-dasharray','none');
+    line.innerHTML = '';
+  }
+}
+
+function clearActiveLines() {
+  document.querySelectorAll('[id^="active-line-"]').forEach(e => e.remove());
+}
+
+function setAgent(id, state) {
+  const circ = document.getElementById('circ-' + id);
+  const ring = document.getElementById('ring-' + id);
+  const st = document.getElementById('st-' + id);
+  if (!circ) return;
+
+  circ.classList.remove('speaking','listening');
+  ring.style.display = 'none';
+
+  if (state === 'speaking') {
+    circ.classList.add('speaking');
+    ring.style.display = 'block';
+    st.textContent = 'TRANSMITTING';
+  } else if (state === 'listening') {
+    circ.classList.add('listening');
+    st.textContent = 'LISTENING';
+  } else if (state === 'thinking') {
+    st.textContent = '...';
+  } else {
+    st.textContent = '';
+  }
+}
+
+function resetAgents() {
+  ALL.forEach(id => setAgent(id, 'idle'));
+  clearActiveLines();
+}
+
+function showBubble(agentId, text) {
+  const bubble = document.getElementById('msg-bubble');
+  const ag = getPos(agentId);
+  const wrap = document.getElementById('rt-canvas-wrap');
+  const ww = wrap.offsetWidth;
+
+  let bx = ag.x + 50;
+  let by = ag.y - 40;
+  if (bx + 180 > ww) bx = ag.x - 185;
+  if (by < 0) by = ag.y + 20;
+
+  bubble.style.left = bx + 'px';
+  bubble.style.top = by + 'px';
+
+  const isLeft = bx > ag.x;
+  bubble.style.setProperty('--tip-x', isLeft ? '-5px' : 'calc(100% - 3px)');
+  bubble.style.setProperty('--tip-rot', isLeft ? '-45deg' : '135deg');
+
+  bubble.textContent = text;
+  bubble.classList.add('show');
+}
+
+function hideBubble() {
+  document.getElementById('msg-bubble').classList.remove('show');
+}
+
+function addLog(agentId, text) {
+  const log = document.getElementById('rt-log');
+  const line = document.createElement('div');
+  line.className = 'rt-log-line';
+  const lbl = document.createElement('span');
+  lbl.className = 'lbl';
+  lbl.textContent = agentId.toUpperCase();
+  line.appendChild(lbl);
+  line.appendChild(document.createTextNode(text));
+  log.appendChild(line);
+  requestAnimationFrame(() => requestAnimationFrame(() => line.classList.add('show')));
+  log.scrollTop = log.scrollHeight;
+}
+
+function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+const SCRIPTS = {
+  fire:         ['Fire confirmed on floors 2-3. Structural risk to north wing. Two stairwells accessible.',
+                 'Propose: evacuate via east exit, isolate north wing, foam suppression on level 2.'],
+  medical:      ['MCI Level 2 activated. Triage zone set 100m east, upwind. 2 ambulances staged.',
+                 'Propose: extraction team enter via east stairwell with medical kit. Trauma unit ETA 9 min.'],
+  intelligence: ['Blueprints retrieved. 5 workers last logged on floor 2, sector B. No seismic sensors active.',
+                 'Propose: thermal scan via roof hatch before any entry. Confirm positions first.'],
+  logistics:    ['Equipment: 3 ladders, 2 hose units, foam reserves 80%. Road to east gate: clear.',
+                 'Propose: ladder unit to east wall, second unit standby at loading dock.'],
+  engineering:  ['Load-bearing wall on north side showing stress fractures. Collapse risk within ~20 min.',
+                 'Propose: reinforce entry frame before extraction. Do not use north stairwell.'],
+  police:       ['Perimeter 80m secured. 23 civilians evacuated. Press held at outer cordon.',
+                 'Propose: close east access road to all but emergency vehicles immediately.'],
+};
+
+async function runSimulation() {
+  if (running) return;
+  const incident = document.getElementById('rt-incident-input').value.trim();
+  if (!incident) return;
+  running = true;
+  document.getElementById('rt-run-btn').disabled = true;
+
+  document.getElementById('rt-log').innerHTML = '';
+  resetAgents();
+  clearActiveLines();
+  drawStaticLines();
+
+  addLog('system', 'Incident activated: ' + incident);
+  await delay(500);
+
+  setAgent('commander', 'speaking');
+  activateLine('commander', 'fire', true);
+  activateLine('commander', 'medical', true);
+  activateLine('commander', 'intelligence', true);
+  activateLine('commander', 'logistics', true);
+  activateLine('commander', 'engineering', true);
+  activateLine('commander', 'police', true);
+  showBubble('commander', 'Round Table initiated. All units — assess and report.');
+  addLog('commander', 'Round Table initiated. All units assess and report.');
+  await delay(2000);
+  hideBubble();
+  clearActiveLines();
+
+  setAgent('commander', 'listening');
+
+  for (const id of AGENTS) {
+    ALL.forEach(a => { if (a !== id) setAgent(a, 'listening'); });
+    setAgent(id, 'thinking');
+    clearActiveLines();
+    await delay(500);
+
+    setAgent(id, 'speaking');
+    activateLine(id, 'commander', true);
+    const lines = SCRIPTS[id];
+    showBubble(id, lines[0]);
+    addLog(id, lines[0]);
+    await delay(2000);
+    showBubble(id, lines[1]);
+    addLog(id, lines[1]);
+    await delay(2200);
+    hideBubble();
+    clearActiveLines();
+    setAgent(id, 'idle');
+    await delay(300);
+  }
+
+  resetAgents();
+  setAgent('commander', 'thinking');
+  addLog('commander', 'Processing all reports...');
+  await delay(1200);
+
+  setAgent('commander', 'speaking');
+  AGENTS.forEach(id => {
+    setAgent(id, 'listening');
+    activateLine('commander', id, false);
+  });
+  const decision = 'Plan approved: East stairwell extraction led by Fire + Medical. Engineering reinforces entry. Police holds perimeter. Intelligence confirms positions via thermal. Logistics: ladder unit to east wall. Execute.';
+  showBubble('commander', 'Plan approved. Execute.');
+  addLog('commander', decision);
+  await delay(3000);
+  hideBubble();
+
+  ALL.forEach(id => setAgent(id, 'idle'));
+  clearActiveLines();
+  addLog('system', 'Sync complete. All units proceeding.');
+
+  running = false;
+  document.getElementById('rt-run-btn').disabled = false;
+}
+
+function resetSim() {
+  if (running) return;
+  resetAgents();
+  clearActiveLines();
+  drawStaticLines();
+  document.getElementById('rt-log').innerHTML = '<div class="rt-log-line show" style="color:#8ab0d4;font-style:italic;font-size:11px">Enter an incident below and press Activate...</div>';
+  hideBubble();
+}
+
+window.addEventListener('load', () => {
+  drawBg();
+  drawStaticLines();
+});
+window.addEventListener('resize', () => {
+  drawBg();
+  drawStaticLines();
+});
+</script>
